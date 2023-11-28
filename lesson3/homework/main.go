@@ -72,9 +72,9 @@ func NewReader(s *os.File, offset int, limit int) io.Reader {
 }
 
 func (r MyReader) Read(p []byte) (res []byte, err error) {
-	fmt.Println("\nsource len: ", len(p))
+	// fmt.Println("\nsource len: ", len(p))
 	n, err := r.r.Read(p)
-	fmt.Println("\n n: ", n)
+	// fmt.Println("\n n: ", n)
 	res = p[:n]
 	// fmt.Println("\n res input len: ", len(res))
 
@@ -144,7 +144,7 @@ func main() {
 	}
 
 	buf := make([]byte, opts.BlockSize)
-	fmt.Println("\nbuf size: ", len(buf))
+	// fmt.Println("\nbuf size: ", len(buf))
 	for {
 		res, err := r.Read(buf)
 		if err == io.EOF {
