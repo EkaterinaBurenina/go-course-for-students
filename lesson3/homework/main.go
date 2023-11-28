@@ -29,7 +29,7 @@ func ParseFlags() (*Options, error) {
 
 	flag.IntVar(&opts.Offset, "offset", 0, "offset in bytes")
 	flag.IntVar(&opts.Limit, "limit", 0, "limit in bytes")
-	flag.IntVar(&opts.BlockSize, "block-size", 1024000000, "block size in bytes")
+	flag.IntVar(&opts.BlockSize, "block-size", 1024, "block size in bytes")
 
 	flag.StringVar(&opts.Conv, "conv", "", "convert to format")
 
@@ -72,11 +72,11 @@ func NewReader(s *os.File, offset int, limit int) io.Reader {
 }
 
 func (r MyReader) Read(p []byte) (res []byte, err error) {
-	// fmt.Println("\nsource len: ", len(p))
 	n, err := r.r.Read(p)
-	// fmt.Println("\n n: ", n)
+	// s := r.r.Size()
+	// n, err := io.ReadFull(r.r, p)
+	// res, err = io.ReadAll(r.r)
 	res = p[:n]
-	// fmt.Println("\n res input len: ", len(res))
 
 	have_upper_case := false
 	have_lower_case := false
@@ -144,7 +144,6 @@ func main() {
 	}
 
 	buf := make([]byte, opts.BlockSize)
-	// fmt.Println("\nbuf size: ", len(buf))
 	for {
 		res, err := r.Read(buf)
 		if err == io.EOF {
