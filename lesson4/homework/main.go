@@ -32,8 +32,7 @@ func walkDir(path string) (size int) {
 	return
 }
 
-func walkDir2(wg *sync.WaitGroup, path string, f_size_list chan int) {
-	// defer wg.Done()
+func walkDir2(wg *sync.WaitGroup, path string, fSizeList chan int) {
 	fmt.Println("WALK ", path)
 
 	items, err := os.ReadDir(path)
@@ -46,16 +45,14 @@ func walkDir2(wg *sync.WaitGroup, path string, f_size_list chan int) {
 
 		if item.IsDir() {
 			wg.Add(1)
-
-			go walkDir2(wg, path+"/"+item.Name(), f_size_list)
-			defer wg.Done()
-			// go func() {
-			// 	defer wg.Done()
-			// 	walkDir2(wg, path+"/"+item.Name(), f_size_list)
-			// }()
+			go func() {
+				defer wg.Done()
+				walkDir2(wg, path+"/"+item.Name(), fSizeList)
+			}()
 		} else {
 			f_info, _ := item.Info()
-			f_size_list <- int(f_info.Size())
+			//fmt.Println(f_info.Size())
+			fSizeList <- int(f_info.Size())
 		}
 	}
 }
@@ -67,26 +64,27 @@ func main() {
 	var result int
 
 	wg := sync.WaitGroup{}
-	f_size_list := make(chan int)
-	defer close(f_size_list)
+	fSizeList := make(chan int)
 
-	wg.Add(1)
+	done := make(chan struct{})
 	go func() {
-		defer wg.Done()
-		for size := range f_size_list {
+		for size := range fSizeList {
 			result += size
-			fmt.Println("result += size: ", result)
+			//fmt.Println("result += size: ", result)
 		}
+		close(done)
 	}()
 
 	wg.Add(1)
-	// go walkDir2(&wg, path, f_size_list)
 	go func() {
 		defer wg.Done()
-		walkDir2(&wg, path, f_size_list)
+		walkDir2(&wg, path, fSizeList)
 	}()
 
 	wg.Wait()
 
+	close(fSizeList)
+
+	<-done
 	fmt.Println("async result: ", result)
 }
