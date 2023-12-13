@@ -2,6 +2,8 @@ package storage
 
 import (
 	"context"
+	"fmt"
+	"golang.org/x/sync/errgroup"
 )
 
 // Result represents the Size function result
@@ -31,7 +33,54 @@ func NewSizer() DirSizer {
 	return &sizer{}
 }
 
+func walkDir(g *errgroup.Group, ctx context.Context, dir Dir, fSizeList chan<- int64) error {
+	childDirs, files, err := dir.Ls(ctx)
+	if err != nil {
+		fmt.Println("dir ls ERROR: ", err)
+		return err
+	}
+
+	for _, childDir := range childDirs {
+		g.Go(func() error {
+			err := walkDir(g, ctx, childDir, fSizeList)
+			return err
+		})
+	}
+	for _, f := range files {
+		fSize, err := f.Stat(ctx)
+		if err != nil {
+			//fmt.Println("f stat ERROR: ", err)
+			return err
+		}
+		fSizeList <- fSize
+	}
+	return nil
+}
+
 func (a *sizer) Size(ctx context.Context, d Dir) (Result, error) {
-	// TODO: implement this
-	return Result{}, nil
+	g, ctx := errgroup.WithContext(ctx)
+	fSizeList := make(chan int64)
+	res := Result{}
+	done := make(chan struct{})
+	go func() {
+		for size := range fSizeList {
+			res.Size += size
+			res.Count++
+		}
+		close(done)
+	}()
+
+	g.Go(func() error {
+		err := walkDir(g, ctx, d, fSizeList)
+		return err
+	})
+
+	if err := g.Wait(); err != nil {
+		return res, err
+	}
+
+	close(fSizeList)
+	<-done
+
+	return res, nil
 }
