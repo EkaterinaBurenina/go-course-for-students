@@ -41,6 +41,7 @@ func walkDir(g *errgroup.Group, ctx context.Context, dir Dir, fSizeList chan<- i
 	}
 
 	for _, childDir := range childDirs {
+		childDir := childDir
 		g.Go(func() error {
 			err := walkDir(g, ctx, childDir, fSizeList)
 			return err
